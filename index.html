@@ -1,0 +1,832 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>STRESS ZOMBIE APOCALYPSE - Mohr's Circle Survival</title>
+  <link rel="stylesheet" href="styles.css?v=4.7">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='50' r='45' fill='%23070d14' stroke='%2300e5ff' stroke-width='6'/><line x1='15' y1='85' x2='85' y2='15' stroke='%23ff1744' stroke-width='6'/><circle cx='50' cy='50' r='6' fill='%23ffe600'/></svg>">
+</head>
+<body>
+
+  <!-- ================= TOP STATUS HUD BAR ================= -->
+  <header id="top-hud">
+    <div class="hud-title-box">
+      <div class="game-title">⚡ STRESS ZOMBIE APOCALYPSE</div>
+    </div>
+
+    <div class="hud-stats-group">
+      <div class="hud-stat-item">
+        <span class="stat-label">LEVEL:</span>
+        <span id="hudLevel" class="stat-val val-cyan">1</span>
+      </div>
+      <div class="hud-stat-item">
+        <span class="stat-label">SCORE:</span>
+        <span id="hudScore" class="stat-val val-green">0</span>
+      </div>
+      <div class="hud-stat-item">
+        <span class="stat-label">STREAK:</span>
+        <span id="hudStreak" class="stat-val val-orange">0x</span>
+      </div>
+      <div class="hud-stat-item">
+        <span class="stat-label">HP:</span>
+        <span id="hudHealth" class="stat-val val-cyan">100%</span>
+      </div>
+    </div>
+
+    <div class="hud-actions-group">
+      <button id="openWelcomeBtn" class="top-btn" title="Home &amp; Rules">🏠 HOME</button>
+      <button id="openLevelsBtn" class="top-btn highlight" title="Choose Level">🗺️ LEVELS</button>
+      <button id="soundToggleBtn" class="top-btn" title="Toggle Sound Effects">🔊 SFX: ON</button>
+      <button id="musicToggleBtn" class="top-btn" title="Toggle Background Music">🎵 MUSIC: ON</button>
+      <button id="openGuideBtn" class="top-btn" title="How Mohr's Circle Works">❓ GUIDE</button>
+      <button id="openStudyBtn" class="top-btn" title="Mohr's Circle Sandbox">🔬 LAB</button>
+    </div>
+  </header>
+
+  <!-- ================= MAIN BATTLEFIELD & ARENA ================= -->
+  <main id="arena-container">
+    <!-- Interactive Tutorial Drill Bar (visible only during Tutorial before Level 1) -->
+    <div id="tutorialCoachBar" class="tutorial-coach-bar" style="display: none;">
+      <div class="tutorial-coach-top">
+        <span class="tutorial-coach-tag">🎓 TUTORIAL</span>
+        <div id="tutorialCoachSteps" class="tutorial-coach-steps">
+          <span class="tut-step-pill active" data-step="1">1. Aim</span>
+          <span class="tut-step-pill" data-step="2">2. Shear 2θ</span>
+          <span class="tut-step-pill" data-step="3">3. Ductile τmax</span>
+          <span class="tut-step-pill" data-step="4">4. Hydro [5]</span>
+        </div>
+        <button id="btnTutorialSkip" class="btn-tut-skip" title="Skip tutorial and start Level 1">SKIP ➔</button>
+      </div>
+      <div id="tutorialCoachMsg" class="tutorial-coach-msg">⏳ Wait for practice zombie...</div>
+    </div>
+
+    <div id="canvasOverlay" class="canvas-overlay">
+      <canvas id="battleCanvas" width="840" height="480"></canvas>
+      <!-- Live Per-Zombie Kill Report (shown right when EACH zombie is killed without pausing action!) -->
+      <div id="liveKillCard" class="live-kill-card" aria-live="polite">
+        <div class="lk-head">
+          <span id="lkTitle">💀 ZOMBIE CLEAVED</span>
+          <span id="lkScore" class="lk-badge">+0</span>
+        </div>
+        <div id="lkStats" class="lk-stats"></div>
+        <div id="lkTheory" class="lk-theory"></div>
+      </div>
+      <div id="gameToast" class="game-toast"></div>
+    </div>
+  </main>
+
+  <!-- ================= TACTICAL CONTROL DECK ================= -->
+  <footer id="control-deck">
+    <!-- COLUMN 1: ROTARY GUN HANDLE & TRIGGER CONTROLS -->
+    <section class="deck-column">
+      <div class="col-header">
+        <span>GUN CRANK (AIM θ)</span>
+        <span id="proximityBadge" class="prox-badge cold">WAIT</span>
+      </div>
+
+      <div class="dial-box">
+        <canvas id="dialCanvas" width="130" height="130" title="Drag handle to align θ with Mohr's Circle"></canvas>
+      </div>
+
+      <div class="readouts-row">
+        <div>ANGLE θ: <strong id="readoutTheta" class="val-cyan">0.0°</strong></div>
+        <div>MOHR 2θ: <strong id="readoutTwoTheta" class="val-orange">0.0°</strong></div>
+      </div>
+
+      <div class="angle-slider-row">
+        <input type="range" id="angleSlider" class="slider-range" min="0" max="180" step="0.5" value="0">
+      </div>
+
+      <div class="quick-buttons-row">
+        <button class="btn-snap" onclick="if(window.game) window.game.hud.setAngle(0)">0°</button>
+        <button class="btn-snap" onclick="if(window.game) window.game.hud.setAngle(22.5)">22.5°</button>
+        <button class="btn-snap" onclick="if(window.game) window.game.hud.setAngle(45)">45°</button>
+        <button class="btn-snap" onclick="if(window.game) window.game.hud.setAngle(67.5)">67.5°</button>
+        <button class="btn-snap" onclick="if(window.game) window.game.hud.setAngle(90)">90°</button>
+        <button class="btn-snap" onclick="if(window.game) window.game.hud.setAngle(135)">135°</button>
+        <button class="btn-step" onclick="if(window.game) window.game.hud.setAngle(window.game.hud.dialAngle - 5)">-5°</button>
+        <button class="btn-step" onclick="if(window.game) window.game.hud.setAngle(window.game.hud.dialAngle - 1)">-1°</button>
+        <button class="btn-step" onclick="if(window.game) window.game.hud.setAngle(window.game.hud.dialAngle + 1)">+1°</button>
+        <button class="btn-step" onclick="if(window.game) window.game.hud.setAngle(window.game.hud.dialAngle + 5)">+5°</button>
+      </div>
+
+      <button id="fireBtn" class="btn-fire" title="Fire Machine Gun [Spacebar]">🔥 FIRE GUN [SPACE]</button>
+    </section>
+
+    <!-- COLUMN 2: MOHR'S CIRCLE RADAR & CURVES -->
+    <section class="deck-column">
+      <div class="col-header">
+        <span>MOHR'S CIRCLE (2θ)</span>
+        <span class="val-cyan" style="font-size: 10px;">CLICK TO AIM</span>
+      </div>
+
+      <div class="radar-box">
+        <canvas id="mohrCanvas" width="280" height="280" title="Click target dot on Mohr's Circle to aim"></canvas>
+        <canvas id="curveCanvas" width="280" height="110" title="Stress σθ &amp; τθ vs Angle θ"></canvas>
+      </div>
+    </section>
+
+    <!-- COLUMN 3: POWER-UPS & REFERENCE CODEX -->
+    <section class="deck-column">
+      <div class="col-header">
+        <span>POWER-UPS</span>
+        <span style="font-size: 10px; color: var(--text-muted);">KEYS [1-5]</span>
+      </div>
+
+      <div class="powerups-grid">
+        <button id="powerSlowmoBtn" class="powerup-btn" title="Slow-Mo [1]">
+          <span>⏳ SLOW</span>
+          <span class="p-count">x2</span>
+        </button>
+        <button id="powerHintBtn" class="powerup-btn" title="Target Hint [2]">
+          <span>🎯 HINT</span>
+          <span class="p-count">x3</span>
+        </button>
+        <button id="powerScannerBtn" class="powerup-btn" title="Radar Unjam [3]">
+          <span>📡 SCAN</span>
+          <span class="p-count">x2</span>
+        </button>
+        <button id="powerShieldBtn" class="powerup-btn" title="Invariant Shield [4]">
+          <span>🛡️ SHIELD</span>
+          <span class="p-count">x1</span>
+        </button>
+        <button id="powerHydroBtn" class="powerup-btn" title="Hydro-Jet [5] — Wipes τ = 0">
+          <span class="val-cyan">💧 HYDRO</span>
+          <span class="p-count">x2</span>
+        </button>
+      </div>
+
+      <div class="col-header" style="margin-top: 6px;">
+        <span>TARGET GUIDE</span>
+        <span class="val-green" style="font-size: 10px;">WEAKNESS</span>
+      </div>
+
+      <div class="codex-card">
+        <div class="codex-item rankine">
+          <strong class="val-cyan">Cyan (Brittle):</strong> Aim at <strong>σ1</strong>.
+        </div>
+        <div class="codex-item tresca">
+          <strong class="val-orange">Orange (Ductile):</strong> Aim at <strong>τmax</strong> or <strong>[5] Hydro</strong>.
+        </div>
+        <div class="codex-item vonmises">
+          <strong class="val-red">Boss:</strong> Keep aligned &amp; hold fire.
+        </div>
+      </div>
+    </section>
+  </footer>
+
+  <!-- ================= MODALS & OVERLAYS ================= -->
+
+  <!-- ================= OPENING ANIMATED TITLE & ZOMBIE INTRO ("GIF" SPLASH BEFORE WELCOME) ================= -->
+  <div id="introSplashOverlay" class="intro-splash-overlay visible" role="button" tabindex="0" aria-label="Enter Stress Zombie Apocalypse">
+    <canvas id="introSplashCanvas"></canvas>
+    <div class="intro-splash-content">
+      <h1 class="intro-game-title" aria-label="Stress Zombie Apocalypse">
+        <span class="intro-title-top">STRESS ZOMBIE</span>
+        <span class="intro-title-main">APOCALYPSE</span>
+      </h1>
+    </div>
+    <div class="intro-tap-hint">PRESS [SPACE] OR CLICK TO ENTER</div>
+    <div class="intro-progress-track"><div id="introProgressFill" class="intro-progress-fill"></div></div>
+  </div>
+
+  <!-- WELCOME SCREEN (SHORT, SWEET & ESSENTIAL) -->
+  <div id="welcomeModal" class="modal-overlay">
+    <canvas id="welcomeCanvas"></canvas>
+
+    <div class="entry-surface-deck">
+      <!-- 1. TITLE + QUICK ACTIONS -->
+      <div class="entry-hero-header">
+        <div class="entry-title-row">
+          <div>
+            <h1 class="entry-main-title">⚡ STRESS ZOMBIE APOCALYPSE</h1>
+            <div class="entry-subtitle">AIM ON MOHR'S CIRCLE. UNLOCK &amp; FIRE.</div>
+          </div>
+          <div class="entry-utility-btns">
+            <button id="btnWelcomeGuide" class="btn-welcome-util" title="How Mohr's Circle Works">❓ GUIDE</button>
+            <button id="btnWelcomeStudy" class="btn-welcome-util" title="Mohr's Circle Sandbox">🔬 LAB</button>
+            <button id="btnWelcomeClose" class="btn-welcome-util" title="Level Map">🗺️ LEVELS</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- 2. COMPACT HORROR SOUND TEST -->
+      <div class="zombie-transmission-box">
+        <div class="transmission-header">
+          <span style="font-size: 1.2rem;">🧟</span>
+          <strong style="color: var(--red-glow); font-family: var(--font-mono); font-size: 0.8rem; letter-spacing: 0.5px;">HORROR SOUND</strong>
+          <div id="eqVisualizer" class="eq-visualizer" title="Sound Spectrum">
+            <div class="eq-bar"></div>
+            <div class="eq-bar"></div>
+            <div class="eq-bar"></div>
+            <div class="eq-bar"></div>
+            <div class="eq-bar"></div>
+            <div class="eq-bar"></div>
+          </div>
+          <button id="btnPlayZombieCall" class="btn-audio-call" title="Preview Horror Zombie Sound">
+            ▶ PLAY HORROR CALL
+          </button>
+        </div>
+      </div>
+
+      <!-- 3. 3-STEP RULES -->
+      <div class="entry-steps-ribbon">
+        <div class="entry-step-item">
+          <div class="step-num-badge">1</div>
+          <div class="step-content">
+            <strong class="val-cyan">WAIT FOR ZOMBIE</strong>
+            <p>Gun unlocks once a zombie enters the screen.</p>
+          </div>
+        </div>
+        <div class="entry-step-item">
+          <div class="step-num-badge">2</div>
+          <div class="step-content">
+            <strong class="val-orange">MATCH MOHR ANGLE</strong>
+            <p>Align <strong>θ</strong> to <span class="val-cyan">Cyan σ1</span> or <span class="val-orange">Orange τmax</span>.</p>
+          </div>
+        </div>
+        <div class="entry-step-item">
+          <div class="step-num-badge">3</div>
+          <div class="step-content">
+            <strong class="val-green">SHOOT &amp; REVIEW</strong>
+            <p>Hold <strong>[SPACE]</strong> to fire &amp; inspect every zombie's report!</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- 4. CONTROLS -->
+      <div class="entry-controls-bar">
+        <span style="color: var(--text-muted); font-weight: bold;">CONTROLS:</span>
+        <div class="control-pill"><span class="control-key">A</span><span class="control-key">D</span><span>Turn Crank θ</span></div>
+        <div class="control-pill"><span class="control-key">SPACE</span><span>Fire</span></div>
+        <div class="control-pill"><span class="control-key">5</span><span>Hydro</span></div>
+        <div class="control-pill"><span class="control-key">CLICK RADAR</span><span>Quick Aim</span></div>
+      </div>
+
+      <!-- 5. START ACTIONS -->
+      <div class="entry-actions-row">
+        <button id="btnWelcomeTutorial" class="btn-tutorial-launch">
+          🎓 PLAY TUTORIAL <span id="welcomeTutorialTag" class="tut-tag">BEFORE LEVEL 1</span>
+        </button>
+        <button id="btnWelcomePlay" class="btn-hero-launch">
+          ▶ START CAMPAIGN [SPACE] ➔
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 0. 3D ANIME ZOMBIE LEVEL SELECT MAP MODAL -->
+  <div id="levelSelectModal" class="modal-overlay">
+    <div class="modal-card level-map-modal-card" style="max-width: 960px; text-align: left;">
+      <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1.5px solid var(--border-neon); padding-bottom: 8px; gap: 10px;">
+        <h1 class="modal-title val-cyan" style="margin-bottom: 0;">🗺️ SELECT LEVEL</h1>
+        <button id="closeLevelsBtn" class="btn-secondary" style="margin-top: 0; padding: 6px 12px;">← HOME</button>
+      </div>
+
+      <!-- Compact Progress Strip -->
+      <div id="campaignStatusBanner" class="campaign-status-banner"></div>
+
+      <!-- Interactive 3D Anime Apocalypse Route Map with Patrolling Zombies -->
+      <div id="levelMapDioramaWrap" class="level-map-diorama-wrap">
+        <canvas id="levelMapDioramaCanvas" width="900" height="175" title="Click any unlocked zombie sector node on the route"></canvas>
+        <div id="levelMapDioramaTip" class="level-map-diorama-tip">☣️ CLICK ANY UNLOCKED SECTOR ON THE APOCALYPSE ROUTE OR CARDS BELOW TO PLAY</div>
+      </div>
+
+      <!-- Compact Tutorial Strip before Level 1 -->
+      <div id="tutorialBannerCard" class="tutorial-banner-card">
+        <div class="tutorial-banner-left">
+          <canvas id="tutorialZombieCanvas" width="54" height="58" class="tutorial-zombie-canvas" title="Practice Dummy Zombie"></canvas>
+          <div class="tutorial-banner-info">
+            <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+              <strong class="val-green" style="font-family: var(--font-mono); font-size: 0.86rem;">🎓 TUTORIAL</strong>
+              <span id="tutorialBannerBadge" class="tut-status-badge">PLAY FIRST</span>
+            </div>
+            <p style="font-size: 11px; color: var(--text-dim); margin: 2px 0 0 0;">
+              Learn aiming, gun lock &amp; [5] Hydro-Jet before Level 1.
+            </p>
+          </div>
+        </div>
+        <button id="btnMapTutorial" class="btn-map-tutorial">▶ PLAY TUTORIAL</button>
+      </div>
+
+      <!-- 3D Zombie Dossier Level Cards Grid -->
+      <div id="levelGrid" class="level-grid"></div>
+
+      <!-- Footer -->
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 8px; padding-top: 8px; border-top: 1px solid rgba(0, 229, 255, 0.2); flex-wrap: wrap; gap: 8px;">
+        <button id="btnResetProgress" class="btn-text-danger" title="Reset progress back to Level 1">↺ Reset Progress</button>
+        <button id="btnLevelsClose" class="btn-primary" style="margin-top: 0; padding: 9px 22px; font-weight: 900;">▶ PLAY LEVEL 1</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 3. LEVEL CLEARED & EVERY-ZOMBIE REPORT MODAL -->
+  <div id="reportModal" class="modal-overlay">
+    <div class="modal-card report-modal-card">
+      <div class="report-modal-header">
+        <h2 id="reportTitle" class="modal-title val-cyan" style="margin-bottom: 4px;">LEVEL CLEARED!</h2>
+        <div id="reportUnlockBanner" class="val-orange" style="font-family: var(--font-mono); font-size: 13px; font-weight: bold; margin-bottom: 4px;"></div>
+        <div class="report-header-stats">
+          <div id="reportScore" class="val-green" style="font-size: 15px;"></div>
+          <div id="reportAccuracy" class="val-yellow" style="font-size: 14px;"></div>
+        </div>
+      </div>
+
+      <!-- Compact Summary + All-Zombie Kill Report Table (ALWAYS VISIBLE) -->
+      <div id="reportDiagnosis" class="report-diagnosis-box"></div>
+
+      <!-- EVERY-ZOMBIE SPECIMEN INSPECTOR (ALWAYS SHOWN WHEN ZOMBIES ARE KILLED) -->
+      <div id="reportLabWrapper" class="report-lab-wrapper">
+        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px; border-bottom: 1px solid rgba(0, 230, 118, 0.25); padding-bottom: 8px; margin-bottom: 10px;">
+          <span class="autopsy-chip">🔬 EVERY ZOMBIE REPORT — SELECT A SPECIMEN</span>
+          <button id="reportLoadInStudyBtn" class="btn-secondary" style="margin-top: 0; font-size: 11px; border-color: #00e5ff; color: #00e5ff;">🔬 STUDY LAB</button>
+        </div>
+
+        <!-- Specimen Selector Tabs -->
+        <div id="reportSpecimenTabs" class="autopsy-specimen-tabs" style="margin-bottom: 10px;"></div>
+
+        <!-- Two-Column Study-Lab Layout inside Post-Level Report -->
+        <div class="study-layout" style="margin-top: 4px;">
+          <!-- LEFT: CONTROLS, SLIDER & STEP-BY-STEP DERIVATIONS -->
+          <div class="study-controls-panel">
+            <div id="reportSpecimenMeta" style="background: rgba(0, 0, 0, 0.45); border: 1px solid rgba(0, 229, 255, 0.25); border-radius: 6px; padding: 8px 10px; margin-bottom: 10px; font-family: var(--font-mono); font-size: 11px; line-height: 1.5;"></div>
+
+            <div class="slider-group">
+              <div class="slider-label-row">
+                <span>Test Angle θ:</span>
+                <div style="display: flex; align-items: center; gap: 6px;">
+                  <strong id="reportAngleVal" class="val-green">22.5°</strong>
+                  <button id="reportResetAngleBtn" class="btn-preset" style="padding: 1px 6px; font-size: 10px;" title="Reset to your winning angle">↺ MY CUT</button>
+                </div>
+              </div>
+              <input type="range" id="reportAngleSlider" class="slider-range" min="0" max="180" value="22.5" step="0.5">
+            </div>
+
+            <!-- Live Step-by-Step Derivations -->
+            <div id="reportDerivationBox" class="study-derivation-box" style="max-height: 295px;"></div>
+          </div>
+
+          <!-- RIGHT: VISUAL CANVASES & DUAL STRESS-STRAIN METRICS MATRIX -->
+          <div class="study-visuals-panel">
+            <div class="study-canvases-row">
+              <div class="canvas-panel-box">
+                <span class="canvas-panel-title">MOHR'S CIRCLE (GREEN=OPTIMAL, RED=CUT θ)</span>
+                <canvas id="reportMohrCanvas" width="265" height="215" style="background: #090d14; border-radius: 4px; border: 1px solid rgba(0, 229, 255, 0.25);"></canvas>
+              </div>
+              <div class="canvas-panel-box">
+                <span class="canvas-panel-title">STRESS &amp; STRAIN ELEMENT (θ)</span>
+                <canvas id="reportElementCanvas" width="265" height="215" style="background: #0c111c; border-radius: 4px; border: 1px solid rgba(0, 229, 255, 0.25);"></canvas>
+              </div>
+            </div>
+
+            <!-- Stress + Strain Metrics Grid -->
+            <div class="study-metrics-grid" style="margin-top: 8px; gap: 3px 10px;">
+              <div class="metric-item"><span>[σx, σy, τxy]:</span><strong id="rep_tensorS" class="val-cyan">-</strong></div>
+              <div class="metric-item"><span>CENTER / RADIUS:</span><strong id="rep_mohrCR" class="val-cyan">-</strong></div>
+              <div class="metric-item"><span>σ1, σ2:</span><strong id="rep_principals" class="val-green">-</strong></div>
+              <div class="metric-item"><span>τmax (θs):</span><strong id="rep_tauMax" class="val-orange">-</strong></div>
+              <div class="metric-item"><span>PRINCIPAL θp:</span><strong id="rep_thetaP" class="val-green">-</strong></div>
+              <div class="metric-item"><span>VON MISES σvm:</span><strong id="rep_vm" class="val-red">-</strong></div>
+              <div class="metric-item"><span>INVARIANTS I1, I2:</span><strong id="rep_inv" class="val-yellow">-</strong></div>
+              <div class="metric-item"><span>CUT (σθ, τθ):</span><strong id="rep_cutS" class="val-yellow">-</strong></div>
+              <div class="metric-item"><span>STRAIN (εx, εy):</span><strong id="rep_epsXY" class="val-green">-</strong></div>
+              <div class="metric-item"><span>εz / γxy:</span><strong id="rep_epsZGamma" class="val-cyan">-</strong></div>
+              <div class="metric-item"><span>ε1, ε2:</span><strong id="rep_eps12" class="val-green">-</strong></div>
+              <div class="metric-item"><span>γmax:</span><strong id="rep_gammaMax" class="val-orange">-</strong></div>
+              <div class="metric-item"><span>DILATATION e:</span><strong id="rep_dilatation" class="val-cyan">-</strong></div>
+              <div class="metric-item"><span>CUT (εθ, γθ):</span><strong id="rep_cutE" class="val-green">-</strong></div>
+            </div>
+
+            <!-- Strain Energy Density Partition Bar -->
+            <div class="energy-density-container" style="margin-top: 8px; margin-bottom: 0; padding: 8px 10px;">
+              <div class="energy-title" style="margin-bottom: 5px;">⚡ STRAIN ENERGY (E = 200 GPa, ν = 0.30)</div>
+              <div class="energy-bar-wrap" style="height: 11px; margin-bottom: 4px;">
+                <div id="repEnergyVolBar" class="energy-bar volumetric" style="width: 20%;"></div>
+                <div id="repEnergyDistBar" class="energy-bar distortion" style="width: 80%;"></div>
+              </div>
+              <div class="energy-legend" style="font-size: 0.65rem;">
+                <span>🔵 Volumetric uv: <strong id="rep_uVol">0</strong></span>
+                <span>🟣 Distortion ud: <strong id="rep_uDist">0</strong></span>
+                <span>⚡ Total u: <strong id="rep_uTot">0</strong></span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="modal-footer-actions">
+        <button id="btnNextLevel" class="btn-primary">🗺️ LEVEL MAP [SPACE] ➔</button>
+        <button id="btnReportStudy" class="btn-secondary">🔬 FULL STUDY LAB</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 3B. TUTORIAL COMPLETE MODAL -->
+  <div id="tutorialCompleteModal" class="modal-overlay">
+    <div class="modal-card tutorial-complete-card">
+      <div class="tutorial-complete-badge">🎓 TUTORIAL CLEAR</div>
+      <h2 class="modal-title val-green" style="margin-bottom: 6px;">READY FOR LEVEL 1!</h2>
+      <p class="modal-subtitle" style="margin-bottom: 12px;">
+        You mastered Mohr aiming, gun lock, τmax shear, and [5] Hydro-Jet.
+      </p>
+      <div class="tutorial-mastered-grid">
+        <div class="tut-master-item">✔ On-Screen Gate</div>
+        <div class="tut-master-item">✔ Cyan Brittle (σ1)</div>
+        <div class="tut-master-item">✔ Orange Ductile (τmax)</div>
+        <div class="tut-master-item">✔ [5] Hydro Quench</div>
+      </div>
+      <div class="modal-footer-actions" style="margin-top: 16px;">
+        <button id="btnTutorialStartL1" class="btn-hero-launch">⚡ PLAY LEVEL 1 [SPACE] ➔</button>
+        <button id="btnTutorialReplay" class="btn-secondary">↺ REPLAY</button>
+        <button id="btnTutorialMap" class="btn-secondary">🗺️ LEVELS</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 4. GAME OVER MODAL -->
+  <div id="gameOverModal" class="modal-overlay">
+    <div class="modal-card gameover-modal-card">
+      <h2 class="modal-title val-red">💀 GAME OVER</h2>
+      <p class="modal-subtitle">A zombie breached your barricade.</p>
+      <div id="finalScore" class="val-yellow" style="font-family: var(--font-mono); font-size: 14px; margin-bottom: 16px;"></div>
+      <div class="modal-footer-actions">
+        <button id="btnRestart" class="btn-primary">↻ RETRY</button>
+        <button id="btnGameOverReports" class="btn-secondary" style="display: none; border-color: #00e676; color: #00e676;">🔬 ZOMBIE REPORTS</button>
+        <button id="btnGameOverLevels" class="btn-secondary">🗺️ LEVELS</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 4B. SHORT & SWEET SOLID MECHANICS GUIDE MODAL -->
+  <div id="guideModal" class="modal-overlay">
+    <div class="modal-card" style="max-width: 780px; text-align: left;">
+      <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1.5px solid var(--border-neon); padding-bottom: 8px;">
+        <h2 class="modal-title val-cyan" style="margin-bottom: 0;">❓ QUICK GUIDE — HOW TO PLAY &amp; LEARN</h2>
+        <button id="closeGuideBtn" class="btn-secondary" style="margin-top: 0;">✕ CLOSE</button>
+      </div>
+
+      <div class="guide-grid">
+        <div class="guide-card guide-gold guide-span-2">
+          <strong class="val-yellow">🎓 Learn Mohr's Circle by Playing</strong>
+          <p>
+            Turn crank <strong>θ</strong> to aim at a zombie's weak stress plane! Rotating physical angle <strong>θ</strong> sweeps Mohr's circle by <strong>2θ</strong> (because stress equations use <code>cos 2θ</code> and <code>sin 2θ</code>).
+          </p>
+        </div>
+
+        <div class="guide-card guide-cyan">
+          <strong class="val-cyan">1. Stress Cube (σx, σy, τxy)</strong>
+          <p>
+            • <span class="val-red">Red</span>: Normal σx | <span class="val-green">Green</span>: Normal σy<br>
+            • <span class="val-orange">Orange</span>: Shear τxy
+          </p>
+        </div>
+
+        <div class="guide-card guide-orange">
+          <strong class="val-orange">2. Angle Doubling (2θ)</strong>
+          <p>
+            <code>90°</code> in real life = <code>180°</code> on Mohr's Circle.<br>
+            Turning your handle <code>22.5°</code> sweeps Mohr's pointer <code>45°</code>!
+          </p>
+        </div>
+
+        <div class="guide-card guide-green">
+          <strong class="val-green">3. Failure Weaknesses</strong>
+          <p>
+            • <strong class="val-cyan">Cyan (Rankine)</strong>: Aim at max tension <strong>σ1</strong> (τ = 0).<br>
+            • <strong class="val-orange">Orange (Tresca)</strong>: Aim at peak shear <strong>τmax</strong>.<br>
+            • <strong class="val-red">Boss (von Mises)</strong>: Maximize distortion energy.
+          </p>
+        </div>
+
+        <div class="guide-card guide-aqua">
+          <strong class="val-cyan">4. 💧 Hydro-Jet [5]</strong>
+          <p>
+            Hydrostatic pressure cancels shear (<strong>τ = 0</strong>), turning tough <span class="val-orange">Orange</span> zombies into brittle <span class="val-cyan">Cyan</span> targets!
+          </p>
+        </div>
+
+        <div class="guide-card guide-purple guide-span-2">
+          <strong class="val-purple">5. Fast Controls</strong>
+          <p>
+            <strong>[A]/[D]</strong> or Click Radar = Aim θ &nbsp;•&nbsp;
+            <strong>[SPACE]</strong> = Fire (armed within ±7.5° once zombie is on screen) &nbsp;•&nbsp;
+            <strong>[1–5]</strong> = Power-Ups
+          </p>
+        </div>
+      </div>
+
+      <div style="text-align: center; margin-top: 14px;">
+        <button id="guideOkBtn" class="btn-primary" style="margin-top: 0; padding: 8px 32px;">🗺️ BACK TO LEVELS ➔</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 5. STUDY LAB & CODEX MODAL -->
+  <div id="studyModal" class="modal-overlay">
+    <div class="modal-card" style="max-width: 960px; max-height: 92vh; overflow-y: auto;">
+      <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-neon); padding-bottom: 10px;">
+        <div>
+          <h2 class="modal-title val-cyan" style="margin-bottom: 2px;">🔬 MOHR'S STUDY LAB</h2>
+          <span style="font-size: 11px; color: var(--text-dim);">Live Mohr's Circle, Hooke's Law Strain &amp; 2θ Sandbox</span>
+        </div>
+        <button id="closeStudyBtn" class="btn-secondary" style="margin-top: 0;">✕ CLOSE</button>
+      </div>
+
+      <div class="study-layout">
+        <!-- STUDY CONTROLS -->
+        <div class="study-controls-panel">
+          <div id="studyLastLevelWrap" style="display: none; margin-bottom: 10px;">
+            <div style="font-size: 11px; color: #00e676; font-family: var(--font-mono); font-weight: bold;">💀 KILLED ZOMBIES (CLICK TO INSPECT):</div>
+            <div id="studyLastLevelZombies" class="preset-btn-group" style="margin-top: 4px;"></div>
+          </div>
+
+          <div style="font-size: 11px; color: var(--cyan-glow); font-family: var(--font-mono); font-weight: bold;">PRESETS:</div>
+          <div class="preset-btn-group">
+            <button id="presetExample1" class="btn-preset" title="Worked Example #1">Zombie #1</button>
+            <button id="presetPureShear" class="btn-preset">Pure Shear (50)</button>
+            <button id="presetUniaxial" class="btn-preset">Uniaxial (100)</button>
+            <button id="presetBiaxial" class="btn-preset">Biaxial (70, 70)</button>
+          </div>
+
+          <div class="slider-group">
+            <div class="slider-label-row">
+              <span>Normal σx:</span>
+              <span id="studySxVal" class="val-cyan">80 MPa</span>
+            </div>
+            <input type="range" id="studySx" class="slider-range" min="-100" max="150" value="80" step="5">
+          </div>
+
+          <div class="slider-group">
+            <div class="slider-label-row">
+              <span>Normal σy:</span>
+              <span id="studySyVal" class="val-cyan">20 MPa</span>
+            </div>
+            <input type="range" id="studySy" class="slider-range" min="-100" max="150" value="20" step="5">
+          </div>
+
+          <div class="slider-group">
+            <div class="slider-label-row">
+              <span>Shear τxy:</span>
+              <span id="studyTxyVal" class="val-orange">30 MPa</span>
+            </div>
+            <input type="range" id="studyTxy" class="slider-range" min="-100" max="100" value="30" step="5">
+          </div>
+
+          <div class="slider-group">
+            <div class="slider-label-row">
+              <span>Angle θ:</span>
+              <span id="studyThetaVal" class="val-green">22.5°</span>
+            </div>
+            <input type="range" id="studyTheta" class="slider-range" min="0" max="180" value="22.5" step="0.5">
+          </div>
+
+          <!-- Live Step-by-Step Mathematical Derivations -->
+          <div id="studyDerivationBox" class="study-derivation-box"></div>
+        </div>
+
+        <!-- STUDY VISUALS -->
+        <div class="study-visuals-panel">
+          <div class="study-canvases-row">
+            <div class="canvas-panel-box">
+              <span class="canvas-panel-title">MOHR'S CIRCLE (2θ)</span>
+              <canvas id="studyMohrCanvas" width="280" height="240"></canvas>
+            </div>
+            <div class="canvas-panel-box">
+              <span class="canvas-panel-title">STRESS &amp; STRAIN ELEMENT (θ)</span>
+              <canvas id="studyElementCanvas" width="280" height="240"></canvas>
+            </div>
+          </div>
+
+          <!-- Numerical Stress & Strain Metrics Matrix -->
+          <div class="study-metrics-grid">
+            <div class="metric-item"><span>CENTER C:</span><strong id="studyCenter" class="val-cyan">-</strong></div>
+            <div class="metric-item"><span>RADIUS R:</span><strong id="studyRadius" class="val-cyan">-</strong></div>
+            <div class="metric-item"><span>PRINCIPAL σ1:</span><strong id="studySigma1" class="val-green">-</strong></div>
+            <div class="metric-item"><span>PRINCIPAL σ2:</span><strong id="studySigma2" class="val-cyan">-</strong></div>
+            <div class="metric-item"><span>PRINCIPAL θp:</span><strong id="studyThetaP" class="val-green">-</strong></div>
+            <div class="metric-item"><span>MAX SHEAR τmax:</span><strong id="studyTauMax" class="val-orange">-</strong></div>
+            <div class="metric-item"><span>MAX SHEAR θs:</span><strong id="studyThetaS" class="val-orange">-</strong></div>
+            <div class="metric-item"><span>VON MISES σvm:</span><strong id="studyVM" class="val-red">-</strong></div>
+            <div class="metric-item"><span>INVARIANT I1:</span><strong id="studyI1" class="val-yellow">-</strong></div>
+            <div class="metric-item"><span>INVARIANT I2:</span><strong id="studyI2" class="val-yellow">-</strong></div>
+            <div class="metric-item"><span>STRAIN εx:</span><strong id="studyEpsX" class="val-green">-</strong></div>
+            <div class="metric-item"><span>STRAIN εy:</span><strong id="studyEpsY" class="val-green">-</strong></div>
+            <div class="metric-item"><span>POISSON εz:</span><strong id="studyEpsZ" class="val-cyan">-</strong></div>
+            <div class="metric-item"><span>SHEAR γxy:</span><strong id="studyGammaXY" class="val-yellow">-</strong></div>
+            <div class="metric-item"><span>PRINCIPAL ε1:</span><strong id="studyEps1" class="val-green">-</strong></div>
+            <div class="metric-item"><span>PRINCIPAL ε2:</span><strong id="studyEps2" class="val-cyan">-</strong></div>
+            <div class="metric-item"><span>MAX SHEAR γmax:</span><strong id="studyGammaMax" class="val-orange">-</strong></div>
+            <div class="metric-item"><span>DILATATION e:</span><strong id="studyDilatation" class="val-cyan">-</strong></div>
+            <div class="metric-item"><span>ENERGY u:</span><strong id="studyEnergyTotal" class="val-magenta">-</strong></div>
+            <div class="metric-item"><span>DISTORTION ud:</span><strong id="studyEnergyDist" class="val-magenta">-</strong></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= CORE SCRIPTS (EXACT FILE REFERENCES) ================= -->
+  <script src="js/mechanics.js?v=4.7"></script>
+  <script src="js/audio.js?v=4.7"></script>
+  <script src="js/zombies.js?v=4.7"></script>
+  <script src="js/hud.js?v=4.7"></script>
+  <script src="js/study.js?v=4.7"></script>
+  <script src="js/game.js?v=4.7"></script>
+
+  <!-- ================= MASTER CONTROLLER INITIALIZATION ================= -->
+  <script>
+    window.addEventListener('DOMContentLoaded', () => {
+      // 1. Initialize Game Engine & Study Lab
+      window.game = new GameEngine();
+      window.studyLab = new StudyLab();
+      window.guideReturnModal = null;
+      window.studyReturnModal = null;
+
+      const studyModal = document.getElementById('studyModal');
+      const guideModal = document.getElementById('guideModal');
+
+      // How It Works Guide Modal Buttons
+      const openGuideBtn = document.getElementById('openGuideBtn');
+      if (openGuideBtn && guideModal) {
+        openGuideBtn.addEventListener('click', () => {
+          window.guideReturnModal = null;
+          guideModal.classList.add('visible');
+        });
+      }
+
+      const closeGuideBtn = document.getElementById('closeGuideBtn');
+      if (closeGuideBtn && guideModal) {
+        closeGuideBtn.addEventListener('click', () => {
+          guideModal.classList.remove('visible');
+          const returnId = window.guideReturnModal;
+          window.guideReturnModal = null;
+          if (returnId) {
+            const m = document.getElementById(returnId);
+            if (m) m.classList.add('visible');
+          } else if (window.game && window.game.state !== 'playing') {
+            if (window.game.state === 'level_clear') {
+              const rep = document.getElementById('reportModal');
+              if (rep) rep.classList.add('visible');
+            } else {
+              window.game.openLevelSelectModal();
+            }
+          }
+        });
+      }
+
+      const guideOkBtn = document.getElementById('guideOkBtn');
+      if (guideOkBtn && guideModal) {
+        guideOkBtn.addEventListener('click', () => {
+          guideModal.classList.remove('visible');
+          window.guideReturnModal = null;
+          window.game.openLevelSelectModal();
+        });
+      }
+
+      // Top HUD Home Button
+      const openWelcomeBtn = document.getElementById('openWelcomeBtn');
+      if (openWelcomeBtn) {
+        openWelcomeBtn.addEventListener('click', () => {
+          const welcomeModal = document.getElementById('welcomeModal');
+          if (welcomeModal) welcomeModal.classList.add('visible');
+        });
+      }
+
+      // 3. Study Lab Modals
+      const openStudyBtn = document.getElementById('openStudyBtn');
+      if (openStudyBtn && studyModal) {
+        openStudyBtn.addEventListener('click', () => {
+          window.studyReturnModal = null;
+          studyModal.classList.add('visible');
+          if (window.game && window.studyLab) {
+            window.studyLab.populateSlainPresets(window.game.levelAutopsies);
+          }
+          window.studyLab.update();
+        });
+      }
+
+      const closeStudyBtn = document.getElementById('closeStudyBtn');
+      if (closeStudyBtn && studyModal) {
+        closeStudyBtn.addEventListener('click', () => {
+          studyModal.classList.remove('visible');
+          const returnId = window.studyReturnModal;
+          window.studyReturnModal = null;
+          if (returnId) {
+            const m = document.getElementById(returnId);
+            if (m) m.classList.add('visible');
+          } else if (window.game && window.game.state !== 'playing') {
+            if (window.game.state === 'level_clear') {
+              const rep = document.getElementById('reportModal');
+              if (rep) rep.classList.add('visible');
+            } else {
+              window.game.openLevelSelectModal();
+            }
+          }
+        });
+      }
+
+      // 5B. Post-Level Forensic Lab Interactive Controls
+      const repAngleSlider = document.getElementById('reportAngleSlider');
+      if (repAngleSlider) {
+        repAngleSlider.addEventListener('input', (e) => {
+          if (window.game) {
+            window.game.reportExploreAngle = parseFloat(e.target.value);
+            window.game.renderPostLevelSpecimenLab();
+          }
+        });
+      }
+
+      const repResetBtn = document.getElementById('reportResetAngleBtn');
+      if (repResetBtn) {
+        repResetBtn.addEventListener('click', () => {
+          if (window.game) window.game.resetPostLevelExploreAngle();
+        });
+      }
+
+      const repLoadStudyBtn = document.getElementById('reportLoadInStudyBtn');
+      if (repLoadStudyBtn) {
+        repLoadStudyBtn.addEventListener('click', () => {
+          const rep = document.getElementById('reportModal');
+          if (rep) rep.classList.remove('visible');
+          window.studyReturnModal = 'reportModal';
+          if (window.game && window.studyLab) {
+            const list = window.game.levelAutopsies;
+            const a = list[window.game.reportSelectedIdx || 0];
+            if (a) {
+              window.studyLab.loadPreset(a.stress.sx, a.stress.sy, a.stress.txy, window.game.reportExploreAngle);
+            } else {
+              window.studyLab.update();
+            }
+          }
+          studyModal.classList.add('visible');
+        });
+      }
+
+      // 6. Level Cleared and Game Over Buttons
+      const btnNext = document.getElementById('btnNextLevel');
+      if (btnNext) {
+        btnNext.addEventListener('click', () => {
+          window.game.nextLevel();
+        });
+      }
+
+      const btnReportStudy = document.getElementById('btnReportStudy');
+      if (btnReportStudy) {
+        btnReportStudy.addEventListener('click', () => {
+          const rep = document.getElementById('reportModal');
+          if (rep) rep.classList.remove('visible');
+          window.studyReturnModal = 'reportModal';
+          if (window.game && window.studyLab) {
+            const list = window.game.levelAutopsies;
+            const a = list[window.game.reportSelectedIdx || 0];
+            if (a) {
+              window.studyLab.loadPreset(a.stress.sx, a.stress.sy, a.stress.txy, a.cutAngle);
+            } else {
+              window.studyLab.update();
+            }
+          }
+          studyModal.classList.add('visible');
+        });
+      }
+
+      const btnRestart = document.getElementById('btnRestart');
+      if (btnRestart) {
+        btnRestart.addEventListener('click', () => {
+          window.game.restartGame();
+        });
+      }
+
+      const btnGameOverReports = document.getElementById('btnGameOverReports');
+      if (btnGameOverReports && studyModal) {
+        btnGameOverReports.addEventListener('click', () => {
+          const gom = document.getElementById('gameOverModal');
+          if (gom) gom.classList.remove('visible');
+          window.studyReturnModal = 'gameOverModal';
+          if (window.game && window.studyLab) {
+            const list = window.game.levelAutopsies;
+            window.studyLab.populateSlainPresets(list);
+            const a = list[0];
+            if (a) {
+              window.studyLab.loadPreset(a.stress.sx, a.stress.sy, a.stress.txy, a.cutAngle);
+            } else {
+              window.studyLab.update();
+            }
+          }
+          studyModal.classList.add('visible');
+        });
+      }
+
+      // 7. High-FPS 60Hz Game Loop
+      function mainLoop() {
+        if (window.game) {
+          window.game.update();
+          window.game.draw();
+        }
+        requestAnimationFrame(mainLoop);
+      }
+      requestAnimationFrame(mainLoop);
+    });
+  </script>
+</body>
+</html>
