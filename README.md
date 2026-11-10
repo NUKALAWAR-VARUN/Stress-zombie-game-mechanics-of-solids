@@ -94,3 +94,5 @@ No server, installation, or Node.js required! Simply double-click `index.html` o
    ```
 3. Go to **Settings** > **Pages** in your GitHub repository and set the source branch to `main`. Your game is instantly live on the web!
 
+
+# Stress-zombie-game-mechanics-of-solids
